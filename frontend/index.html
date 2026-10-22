@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Contact Manager</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+            margin: 0;
+            padding: 30px 15px;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px #0001;
+        }
+
+        h1 {
+            text-align: center;
+            color: #173b67;
+        }
+
+        input, button {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        input {
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #1769aa;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .contact {
+            padding: 12px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .delete {
+            background: #c0392b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Cloud Contact Manager</h1>
+        <p>Add and manage your contacts.</p>
+
+        <form id="contactForm">
+            <input id="name" placeholder="Enter name" required>
+            <input id="email" type="email" placeholder="Enter email" required>
+            <button type="submit">Add Contact</button>
+        </form>
+
+        <p id="message"></p>
+
+        <h2>All Contacts</h2>
+        <div id="contacts">Loading contacts...</div>
+    </div>
+
+    <script>
+        const API = "http://localhost:3000/api/contacts";
+
+        async function loadContacts() {
+            const container = document.getElementById("contacts");
+
+            try {
+                const response = await fetch(API);
+                if (!response.ok) throw new Error("Request failed");
+
+                const contacts = await response.json();
+                container.replaceChildren();
+
+                if (contacts.length === 0) {
+                    container.textContent = "No contacts added yet.";
+                    return;
+                }
+
+                contacts.forEach(contact => {
+                    const card = document.createElement("div");
+                    card.className = "contact";
+
+                    const details = document.createElement("p");
+                    details.textContent =
+                        `${contact.name} - ${contact.email}`;
+
+                    const remove = document.createElement("button");
+                    remove.className = "delete";
+                    remove.textContent = "Delete";
+
+                    remove.onclick = async () => {
+                        const result = await fetch(`${API}/${contact.id}`, {
+                            method: "DELETE"
+                        });
+
+                        if (result.ok) {
+                            loadContacts();
+                        }
+                    };
+
+                    card.append(details, remove);
+                    container.appendChild(card);
+                });
+            } catch {
+                container.textContent =
+                    "Backend connection failed. Check your server.";
+            }
+        }
+
+        document.getElementById("contactForm")
+            .addEventListener("submit", async event => {
+                event.preventDefault();
+
+                const name = document.getElementById("name").value.trim();
+                const email = document.getElementById("email").value.trim();
+                const message = document.getElementById("message");
+
+                try {
+                    const response = await fetch(API, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name, email })
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        message.textContent = result.message;
+                        return;
+                    }
+
+                    message.textContent = "Contact added successfully!";
+                    event.target.reset();
+                    loadContacts();
+                } catch {
+                    message.textContent =
+                        "Backend connection failed. Check your server.";
+                }
+            });
+
+        loadContacts();
+    </script>
+</body>
+</html>
