@@ -2,6 +2,10 @@
 
 A Dockerized full-stack web application to manage contacts through a simple web interface and REST API.
 
+## 📸 Application Preview
+
+![Cloud Contact Manager](screenshots/cloud-web-app.png)
+
 ## ✨ Key Features
 - Create and add new contacts
 - View all saved contacts
