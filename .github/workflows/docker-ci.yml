@@ -1,5 +1,5 @@
 
-name: Docker CI
+name: Docker CI and Tests
 
 on:
   push:
@@ -8,15 +8,30 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build backend image
-        run: docker build -t cloud-web-app-backend ./backend
+      - name: Build and start application
+        run: docker compose up -d --build
 
-      - name: Build frontend image
-        run: docker build -t cloud-web-app-frontend ./frontend
+      - name: Test backend health endpoint
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://localhost:3000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+
+      - name: Test contacts API
+        run: curl -fsS http://localhost:3000/api/contacts
+
+      - name: Stop application
+        if: always()
+        run: docker compose down
