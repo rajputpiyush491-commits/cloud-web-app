@@ -49,4 +49,39 @@ cloud-web-app/
 To practice full-stack application development, REST API integration, database operations, Docker image creation, and container-based deployment.
 
 ## 👨‍💻 Author
-Piyush Kumar
+Piyush Kumar 
+
+## 🐳 Run with Docker Compose
+
+Make sure Docker Desktop is running.
+
+Start both frontend and backend services:
+
+```bash
+docker compose up -d --build
+```
+
+Open the application in your browser:
+
+- Frontend: http://localhost:8080
+- Backend health check: http://localhost:3000/health
+
+Check running services:
+
+```bash
+docker compose ps
+```
+
+Stop the services:
+
+```bash
+docker compose down
+```
+
+## 📌 What I Learned
+
+- Building Docker images for frontend and backend
+- Running multi-container applications with Docker Compose
+- Creating REST APIs with Express.js
+- Connecting a frontend to a backend API
+- Managing project code with Git and GitHub
