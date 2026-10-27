@@ -32,7 +32,7 @@ jobs:
         run: curl -fsS http://localhost:3000/api/contacts
 
       - name: Scan backend Docker image
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: cloud-web-app-backend:latest
           format: table
@@ -42,7 +42,7 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Scan frontend Docker image
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: cloud-web-app-frontend:latest
           format: table
