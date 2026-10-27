@@ -1,5 +1,4 @@
-
-name: Docker CI and Tests
+name: Docker CI, Tests and Security Scan
 
 on:
   push:
@@ -8,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-and-scan:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,6 +30,26 @@ jobs:
 
       - name: Test contacts API
         run: curl -fsS http://localhost:3000/api/contacts
+
+      - name: Scan backend Docker image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: cloud-web-app-backend:latest
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Scan frontend Docker image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: cloud-web-app-frontend:latest
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
 
       - name: Stop application
         if: always()
