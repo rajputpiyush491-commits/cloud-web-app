@@ -1,4 +1,5 @@
-name: Docker CI, Tests and Security Scan
+```yaml
+name: Docker CI, Tests, Security Scan and Publish
 
 on:
   push:
@@ -51,6 +52,26 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
 
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push backend image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag cloud-web-app-backend:latest ${{ vars.DOCKERHUB_USERNAME }}/cloud-web-app-backend:latest
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/cloud-web-app-backend:latest
+
+      - name: Push frontend image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag cloud-web-app-frontend:latest ${{ vars.DOCKERHUB_USERNAME }}/cloud-web-app-frontend:latest
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/cloud-web-app-frontend:latest
+
       - name: Stop application
         if: always()
         run: docker compose down
+```
