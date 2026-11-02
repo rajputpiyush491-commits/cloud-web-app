@@ -69,7 +69,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::459547397576:role/GitHubActionsECRRole
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Verify AWS Identity
