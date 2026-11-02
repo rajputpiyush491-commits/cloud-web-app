@@ -95,4 +95,4 @@ jobs:
           docker build -t cloud-web-app-frontend:latest ./frontend
           docker tag cloud-web-app-frontend:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-web-app-frontend:latest
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-web-app-frontend:latest
-```
+
