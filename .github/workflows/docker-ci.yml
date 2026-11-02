@@ -1,4 +1,4 @@
-```yaml
+
 name: Docker CI, Tests and AWS ECR Push
 
 on:
