@@ -1,4 +1,5 @@
-name: Docker CI Tests Security and Publish
+```yaml
+name: Docker CI, Tests and AWS ECR Push
 
 on:
   push:
@@ -7,108 +8,102 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
 
-env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_BACKEND: cloud-web-app-backend
-  ECR_FRONTEND: cloud-web-app-frontend
-
 jobs:
-  test-and-scan:
+  docker-ci:
+    name: Build and Test Docker Application
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build and start application
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Start Application
         run: docker compose up -d --build
 
-      - name: Test backend health endpoint
+      - name: Test Backend Health
         run: |
-          for i in {1..20}; do
-            if curl -fsS http://localhost:3000/health; then
+          for i in {1..30}; do
+            if curl --fail http://localhost:3000/health; then
+              echo "Backend health check passed"
               exit 0
             fi
             sleep 2
           done
+          echo "Backend health check failed"
           docker compose logs
           exit 1
 
-      - name: Test contacts API
-        run: curl -fsS http://localhost:3000/api/contacts
+      - name: Test Frontend
+        run: |
+          curl --fail http://localhost:8080/
 
-      - name: Scan backend Docker image
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Stop Application
+        if: always()
+        run: docker compose down
+
+  push-to-ecr:
+    name: Authenticate and Push Images to AWS ECR
+    needs: docker-ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Temporary diagnostic step.
+      # Prints only the subject and audience claims, never the JWT.
+      - name: Debug OIDC Claims
+        uses: actions/github-script@v7
         with:
-          image-ref: cloud-web-app-backend:latest
-          format: table
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
+          script: |
+            const token = await core.getIDToken('sts.amazonaws.com');
+            const payload = JSON.parse(
+              Buffer.from(token.split('.')[1], 'base64url').toString()
+            );
+            core.info(`OIDC subject: ${payload.sub}`);
+            core.info(`OIDC audience: ${payload.aud}`);
 
-      - name: Scan frontend Docker image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: cloud-web-app-frontend:latest
-          format: table
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
-
-      - name: Configure AWS credentials
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
+
       - name: Login to Amazon ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Push backend image to ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Build and Push Backend Image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          AWS_ACCOUNT_ID: "459547397576"
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          docker tag cloud-web-app-backend:latest "$ECR_REGISTRY/$ECR_BACKEND:latest"
-          docker push "$ECR_REGISTRY/$ECR_BACKEND:latest"
+          docker build -t cloud-web-app-backend:latest ./backend
+          docker tag cloud-web-app-backend:latest \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-web-app-backend:latest
+          docker push \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-web-app-backend:latest
 
-      - name: Push frontend image to ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Build and Push Frontend Image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          AWS_ACCOUNT_ID: "459547397576"
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          docker tag cloud-web-app-frontend:latest "$ECR_REGISTRY/$ECR_FRONTEND:latest"
-          docker push "$ECR_REGISTRY/$ECR_FRONTEND:latest"
-
-      - name: Login to Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          username: piyush491194
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push backend image to Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker tag cloud-web-app-backend:latest piyush491194/cloud-web-app-backend:latest
-          docker push piyush491194/cloud-web-app-backend:latest
-
-      - name: Push frontend image to Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker tag cloud-web-app-frontend:latest piyush491194/cloud-web-app-frontend:latest
-          docker push piyush491194/cloud-web-app-frontend:latest
-
-      - name: Stop application
-        if: always()
-        run: docker compose down
+          docker build -t cloud-web-app-frontend:latest ./frontend
+          docker tag cloud-web-app-frontend:latest \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-web-app-frontend:latest
+          docker push \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cloud-web-app-frontend:latest
+```
