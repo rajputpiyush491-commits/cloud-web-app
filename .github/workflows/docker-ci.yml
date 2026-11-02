@@ -8,6 +8,15 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_BACKEND: cloud-web-app-backend
+  ECR_FRONTEND: cloud-web-app-frontend
+
 jobs:
   test-and-scan:
     runs-on: ubuntu-latest
@@ -53,6 +62,34 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
 
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push backend image to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker tag cloud-web-app-backend:latest "$ECR_REGISTRY/$ECR_BACKEND:latest"
+          docker push "$ECR_REGISTRY/$ECR_BACKEND:latest"
+
+      - name: Push frontend image to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker tag cloud-web-app-frontend:latest "$ECR_REGISTRY/$ECR_FRONTEND:latest"
+          docker push "$ECR_REGISTRY/$ECR_FRONTEND:latest"
+
       - name: Login to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
@@ -60,13 +97,13 @@ jobs:
           username: piyush491194
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push backend image
+      - name: Push backend image to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker tag cloud-web-app-backend:latest piyush491194/cloud-web-app-backend:latest
           docker push piyush491194/cloud-web-app-backend:latest
 
-      - name: Push frontend image
+      - name: Push frontend image to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker tag cloud-web-app-frontend:latest piyush491194/cloud-web-app-frontend:latest
