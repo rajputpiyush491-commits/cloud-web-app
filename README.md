@@ -89,3 +89,37 @@ docker compose down
 - Creating REST APIs with Express.js
 - Connecting a frontend to a backend API
 - Managing project code with Git and GitHub
+
+  # Cloud Contact Manager
+
+A cloud-based contact management application
+built using Docker and AWS.
+
+## Features
+- Add contacts
+- Display all contacts
+- Backend REST API
+- Docker containerization
+- Automated CI/CD pipeline
+
+## Technologies
+- AWS EC2
+- AWS ECR
+- Docker
+- GitHub Actions
+- IAM OIDC
+- Node.js
+- Express.js
+- HTML, CSS, JavaScript
+
+## Architecture
+GitHub → GitHub Actions → Docker Build
+→ AWS ECR → AWS EC2 → Application
+
+## Deployment
+Frontend runs on port 8080.
+Backend runs on port 3000.
+
+## CI/CD
+GitHub Actions automatically builds and tests
+Docker images and pushes them to AWS ECR.
